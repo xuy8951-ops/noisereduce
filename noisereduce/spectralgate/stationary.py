@@ -24,6 +24,7 @@ class SpectralGateStationary(SpectralGate):
             prop_decrease,
             use_tqdm,
             n_jobs,
+            stationary_soft_mask_slope_db=None,
     ):
         super().__init__(
             y=y,
@@ -43,6 +44,7 @@ class SpectralGateStationary(SpectralGate):
         )
 
         self.n_std_thresh_stationary = n_std_thresh_stationary
+        self.stationary_soft_mask_slope_db = stationary_soft_mask_slope_db
 
         if y_noise is None:
             self.y_noise = self.y
@@ -102,8 +104,22 @@ class SpectralGateStationary(SpectralGate):
                 axis=0,
             ).T
 
-            # mask if the signal is above the threshold
-            sig_mask = sig_stft_db > db_thresh
+            if self.stationary_soft_mask_slope_db is None:
+                # mask if the signal is above the threshold (hard binary mask)
+                sig_mask = sig_stft_db > db_thresh
+            else:
+                # soft sigmoid mask: a gradual transition around the threshold.
+                # Hard 0/1 masks flip time-frequency bins on/off frame by frame,
+                # which produces audible "musical noise"; a soft transition over
+                # `stationary_soft_mask_slope_db` dB smooths that out and keeps
+                # weak speech components near the threshold.
+                sig_mask = 1.0 / (
+                        1.0
+                        + np.exp(
+                                -(sig_stft_db - db_thresh)
+                                / self.stationary_soft_mask_slope_db
+                        )
+                )
 
             sig_mask = sig_mask * self._prop_decrease + np.ones(np.shape(sig_mask)) * (
                     1.0 - self._prop_decrease
