@@ -22,6 +22,7 @@ def reduce_noise(
         thresh_n_mult_nonstationary=2,
         sigmoid_slope_nonstationary=10,
         n_std_thresh_stationary=1.5,
+        stationary_soft_mask_slope_db=None,
         tmp_folder=None,
         chunk_size=600000,
         padding=30000,
@@ -63,6 +64,11 @@ def reduce_noise(
     n_std_thresh_stationary : int, optional
         Number of standard deviations above mean to place the threshold between
         signal and noise., by default 1.5
+    stationary_soft_mask_slope_db : float, optional
+        Only used in stationary noise reduction. If set, the binary spectral
+        mask is replaced by a sigmoid that transitions smoothly over this many
+        dB around the noise threshold, reducing musical-noise artifacts.
+        By default None, which keeps the original hard binary mask.
     tmp_folder : [type], optional
         Temp folder to write waveform to during parallel processing. Defaults to
         default temp folder for python., by default None
@@ -161,6 +167,7 @@ def reduce_noise(
                 tmp_folder=tmp_folder,
                 use_tqdm=use_tqdm,
                 n_jobs=n_jobs,
+                stationary_soft_mask_slope_db=stationary_soft_mask_slope_db,
             )
 
         else:
